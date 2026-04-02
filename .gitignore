@@ -27,4 +27,5 @@ archive/
 
 # Project executable
 mnist_viewer
+mnist_test
 mnist_model.bin

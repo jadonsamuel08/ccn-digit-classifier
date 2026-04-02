@@ -76,6 +76,21 @@ make
 make run
 ```
 
+To evaluate on the MNIST test set (the remaining data):
+
+```bash
+make test
+```
+
+## Latest results
+
+- Full training run: 5 epochs on 60,000 training images
+- Test set evaluation: 10,000 images from `t10k-*` files
+- Observed test accuracy: **96.64%**
+- Observed test average loss: **0.0310317**
+
+This is a strong result for a first from-scratch network and confirms that the model generalizes well beyond the training data.
+
 ## Current training setup
 
 - Learning rate: `0.1`
@@ -84,6 +99,8 @@ make run
 - Current run: full training set (`60000` images from `train-*` files)
 - Activation: sigmoid
 - Loss: mean squared error style accumulation (`0.5 * (output - target)^2`)
+
+The project now also includes a separate test evaluator in `src/evaluate_test.cpp` that loads the saved model and reports accuracy on the test set.
 
 Starting with 1000 images was used as a beginner-friendly sanity check. After confirming forward and backprop worked, training was scaled to the full dataset.
 
@@ -99,8 +116,6 @@ Starting with 1000 images was used as a beginner-friendly sanity check. After co
 
 After this works reliably, good next steps are:
 
-- Evaluate on the MNIST test set (`t10k` files)
 - Shuffle training data each epoch
 - Train with mini-batches
-- Save/load model weights
 - Try ReLU + softmax later for better performance
