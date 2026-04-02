@@ -2,6 +2,7 @@
 #define NEURAL_NETWORK_H
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 class NeuralNetwork {
@@ -11,6 +12,8 @@ public:
 	std::vector<double> forward(const std::vector<double>& input);
 	void backpropagate(const std::vector<double>& input, const std::vector<double>& target);
 	uint8_t predict(const std::vector<double>& input);
+	bool saveModel(const std::string& filePath) const;
+	bool loadModel(const std::string& filePath);
 
 private:
 	static double sigmoid(double x);
