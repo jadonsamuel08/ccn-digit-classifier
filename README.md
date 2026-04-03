@@ -100,17 +100,21 @@ This is a strong result for a first from-scratch network and confirms that the m
 - Activation: sigmoid
 - Loss: mean squared error style accumulation (`0.5 * (output - target)^2`)
 
-The project now also includes a separate test evaluator in `src/evaluate_test.cpp` that loads the saved model and reports accuracy on the test set.
+The project now also includes a separate test evaluator in `src/test.cpp` that loads the saved model and reports accuracy on the test set.
 
 Starting with 1000 images was used as a beginner-friendly sanity check. After confirming forward and backprop worked, training was scaled to the full dataset.
 
 ## Project structure
 
-- `src/main.cpp`: training loop and data preparation
+- `src/preview.cpp`: interactive ASCII preview of training images
+- `src/train.cpp`: training loop and data preparation
 - `src/mnist_loader.cpp`: reads MNIST binary files
-- `src/neural_network.cpp`: forward pass and backprop logic
-- `include/neural_network.h`: neural network class definition
-- `archive/`: MNIST data files
+- `src/neural_net.cpp`: forward pass and backprop logic
+- `src/test.cpp`: test-set evaluation for a saved model
+- `src/draw_gui.cpp`: placeholder for a future Raylib GUI
+- `include/neural_net.h`: neural network class definition
+- `data/`: MNIST data files
+- `models/`: saved trained model artifacts
 
 ## Future ideas
 

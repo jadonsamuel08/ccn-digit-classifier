@@ -6,15 +6,15 @@
 #include <vector>
 
 #include "mnist_loader.h"
-#include "neural_network.h"
+#include "neural_net.h"
 
 using namespace std;
 
 int main() {
 	try {
-		const string testLabelsPath = "archive/t10k-labels.idx1-ubyte";
-		const string testImagesPath = "archive/t10k-images.idx3-ubyte";
-		const string modelPath = "mnist_model.bin";
+		const string testLabelsPath = "data/t10k-labels.idx1-ubyte";
+		const string testImagesPath = "data/t10k-images.idx3-ubyte";
+		const string modelPath = "models/mnist_model.bin";
 
 		uint32_t rows = 0;
 		uint32_t cols = 0;

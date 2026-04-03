@@ -4,16 +4,39 @@
 #include <cstdint>
 #include <stdexcept>
 #include <algorithm>
+#include <filesystem>
 
 #include "mnist_loader.h"
-#include "neural_network.h"
+#include "neural_net.h"
 
 using namespace std;
 
+bool askYesNo(const string& prompt) {
+    while (true) {
+        cout << prompt;
+        string answer;
+        if (!getline(cin, answer)) {
+            return false;
+        }
+
+        transform(answer.begin(), answer.end(), answer.begin(),
+                  [](unsigned char ch) { return static_cast<char>(tolower(ch)); });
+
+        if (answer == "y" || answer == "yes") {
+            return true;
+        }
+        if (answer == "n" || answer == "no") {
+            return false;
+        }
+
+        cout << "Please type 'y' or 'n'." << '\n';
+    }
+}
+
 int main() {
     try {
-        const string labelsPath = "archive/train-labels.idx1-ubyte"; // train-labels path
-        const string imagesPath = "archive/train-images.idx3-ubyte"; // train-images path
+        const string labelsPath = "data/train-labels.idx1-ubyte";
+        const string imagesPath = "data/train-images.idx3-ubyte";
 
         uint32_t rows = 0;
         uint32_t cols = 0;
@@ -36,7 +59,7 @@ int main() {
         const size_t warmupCheckSize = min<size_t>(1000, images.size());
         const size_t trainSize = images.size();
         const int epochs = 5;
-        const string modelPath = "mnist_model.bin";
+        const string modelPath = "models/mnist_model.bin";
 
         NeuralNetwork network(inputSize, hiddenSize, outputSize, learningRate);
 
@@ -62,14 +85,30 @@ int main() {
             cout << "Final Accuracy (" << contextLabel << "): " << accuracy << "%" << '\n';
         };
 
-        if (network.loadModel(modelPath)) {
+        const bool hasSavedModel = filesystem::exists(modelPath);
+        bool trainNewModel = true;
+
+        if (hasSavedModel) {
+            cout << "Found existing model at " << modelPath << "." << '\n';
+            trainNewModel = askYesNo("Train a new model and overwrite it? (y/n): ");
+        }
+
+        if (!trainNewModel) {
+            if (!network.loadModel(modelPath)) {
+                throw runtime_error("Could not load saved model from " + modelPath + ".");
+            }
+
             cout << "Loaded existing model from " << modelPath << ". Skipping retraining." << '\n';
             evaluateAccuracy("loaded model");
             cout << "Training run complete." << '\n';
             return 0;
         }
 
-        cout << "No saved model found. Starting training..." << '\n';
+        if (hasSavedModel) {
+            cout << "Starting new training run and overwriting saved model..." << '\n';
+        } else {
+            cout << "No saved model found. Starting training..." << '\n';
+        }
 
         double lastEpochAccuracy = 0.0;
 
@@ -114,6 +153,7 @@ int main() {
         cout << "Final Accuracy (last epoch): " << lastEpochAccuracy << "%" << '\n';
 
         cout << "Training run complete." << '\n';
+        filesystem::create_directories("models");
         if (!network.saveModel(modelPath)) {
             cerr << "Warning: training finished but failed to save model to " << modelPath << '\n';
         } else {

@@ -1,5 +1,5 @@
-#ifndef NEURAL_NETWORK_H
-#define NEURAL_NETWORK_H
+#ifndef NEURAL_NET_H
+#define NEURAL_NET_H
 
 #include <cstdint>
 #include <string>

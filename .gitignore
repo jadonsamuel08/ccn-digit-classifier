@@ -22,10 +22,11 @@
 
 # Build directories
 build/
-bin/
-archive/
 
-# Project executable
-mnist_viewer
-mnist_test
+# Runtime artifacts
+models/
+data/
 mnist_model.bin
+preview
+train
+test

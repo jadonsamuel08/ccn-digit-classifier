@@ -53,8 +53,8 @@ vector<vector<uint8_t>> loadMnistImages(const string& path, uint32_t& rows, uint
 
 	const uint32_t magic = readBigEndianUInt32(inFile); // Tells the program that the file is a image.
 	const uint32_t numImages = readBigEndianUInt32(inFile); // Number of Images
-	rows = readBigEndianUInt32(inFile);
-	cols = readBigEndianUInt32(inFile);
+	rows = readBigEndianUInt32(inFile); // 28 pixels tall
+	cols = readBigEndianUInt32(inFile); // 28 pixels wide
 
 	if (magic != 2051) {
 		throw runtime_error("Invalid images magic number. Expected 2051.");

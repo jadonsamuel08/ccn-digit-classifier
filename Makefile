@@ -1,25 +1,41 @@
 CXX := g++
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude
-TARGET := mnist_viewer
-TEST_TARGET := mnist_test
-SRCS := src/main.cpp src/mnist_loader.cpp src/neural_network.cpp
-TEST_SRCS := src/evaluate_test.cpp src/mnist_loader.cpp src/neural_network.cpp
 
-.PHONY: all run test clean
+BUILD_DIR := build
+PREVIEW_BIN := $(BUILD_DIR)/preview
+TRAIN_BIN := $(BUILD_DIR)/train
+TEST_BIN := $(BUILD_DIR)/test
 
-all: $(TARGET) $(TEST_TARGET)
+PREVIEW_SRCS := src/preview.cpp src/mnist_loader.cpp
+TRAIN_SRCS := src/train.cpp src/mnist_loader.cpp src/neural_net.cpp
+TEST_SRCS := src/test.cpp src/mnist_loader.cpp src/neural_net.cpp
 
-$(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
+.PHONY: all run preview train test clean
 
-$(TEST_TARGET): $(TEST_SRCS)
-	$(CXX) $(CXXFLAGS) $(TEST_SRCS) -o $(TEST_TARGET)
+all: $(PREVIEW_BIN) $(TRAIN_BIN) $(TEST_BIN)
 
-run: $(TARGET)
-	./$(TARGET)
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+$(PREVIEW_BIN): $(PREVIEW_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(PREVIEW_SRCS) -o $(PREVIEW_BIN)
+
+$(TRAIN_BIN): $(TRAIN_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(TRAIN_SRCS) -o $(TRAIN_BIN)
+
+$(TEST_BIN): $(TEST_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(TEST_SRCS) -o $(TEST_BIN)
+
+run: preview
+
+preview: $(PREVIEW_BIN)
+	./$(PREVIEW_BIN)
+
+train: $(TRAIN_BIN)
+	./$(TRAIN_BIN)
+
+test: $(TEST_BIN)
+	./$(TEST_BIN)
 
 clean:
-	rm -f $(TARGET) $(TEST_TARGET)
+	rm -rf $(BUILD_DIR) preview train test .preview.stamp .train.stamp .test.stamp
