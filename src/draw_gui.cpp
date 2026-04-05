@@ -149,7 +149,7 @@ int main() {
     
     // Layout parameters
     const int canvasOffsetX = 10;
-    const int canvasOffsetY = 10;
+    const int canvasOffsetY = 52;
     const int buttonWidth = 100;
     const int buttonHeight = 40;
     const int predictButtonX = canvasOffsetX + DISPLAY_WIDTH + 15;
@@ -213,8 +213,10 @@ int main() {
         BeginDrawing();
         ClearBackground(RAYWHITE);
         
-        // Draw title
-        DrawText("Digit Recognizer", 10, -2, 16, DARKBLUE);
+        // Draw title area above the interactive panel so it is not cramped.
+        DrawText("Digit Recognizer", 10, 10, 24, DARKBLUE);
+        DrawText("Draw a digit, then click Predict", 10, 34, 14, DARKGRAY);
+        DrawLine(8, 48, screenWidth - 8, 48, LIGHTGRAY);
         
         // Draw the canvas
         renderCanvas(canvasOffsetX, canvasOffsetY);
