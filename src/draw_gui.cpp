@@ -10,23 +10,23 @@
 #include "neural_net.h"
 #include "mnist_loader.h"
 
-// Constants for the GUI
+using namespace std;
+
 const int CANVAS_SIZE = 280;
 const int DISPLAY_SCALE = 1;  // Display the canvas at 1x scale to fit in 600x400
 const int DISPLAY_WIDTH = CANVAS_SIZE * DISPLAY_SCALE;
 const int DISPLAY_HEIGHT = CANVAS_SIZE * DISPLAY_SCALE;
 const int BRUSH_SIZE = 10;
 
-// Drawing canvas (280x280)
-std::vector<std::vector<uint8_t>> canvas;
+vector<vector<uint8_t>> canvas;
 
 // Function to downscale 280x280 to 28x28
-std::vector<std::vector<uint8_t>> downscaleCanvas(const std::vector<std::vector<uint8_t>>& srcCanvas) {
+vector<vector<uint8_t>> downscaleCanvas(const vector<vector<uint8_t>>& srcCanvas) {
     const int srcSize = 280;
     const int dstSize = 28;
     const int scale = srcSize / dstSize;  // Should be 10
     
-    std::vector<std::vector<uint8_t>> result(dstSize, std::vector<uint8_t>(dstSize, 0));
+    vector<vector<uint8_t>> result(dstSize, vector<uint8_t>(dstSize, 0));
     
     for (int y = 0; y < dstSize; y++) {
         for (int x = 0; x < dstSize; x++) {
@@ -55,8 +55,8 @@ std::vector<std::vector<uint8_t>> downscaleCanvas(const std::vector<std::vector<
 }
 
 // Convert 28x28 canvas to vector of normalized doubles for neural network
-std::vector<double> canvasToNeuralNetInput(const std::vector<std::vector<uint8_t>>& downscaledCanvas) {
-    std::vector<double> input;
+vector<double> canvasToNeuralNetInput(const vector<vector<uint8_t>>& downscaledCanvas) {
+    vector<double> input;
     input.reserve(28 * 28);
     
     for (int y = 0; y < 28; y++) {
@@ -74,7 +74,6 @@ std::vector<double> canvasToNeuralNetInput(const std::vector<std::vector<uint8_t
 void drawBrushStroke(int centerX, int centerY) {
     int radius = BRUSH_SIZE;
     
-    // Convert from display coordinates to canvas coordinates
     int canvasX = centerX / DISPLAY_SCALE;
     int canvasY = centerY / DISPLAY_SCALE;
     
@@ -94,7 +93,6 @@ void drawBrushStroke(int centerX, int centerY) {
     }
 }
 
-// Render the canvas to the screen at 4x scale
 void renderCanvas(int offsetX, int offsetY) {
     for (int y = 0; y < CANVAS_SIZE; y++) {
         for (int x = 0; x < CANVAS_SIZE; x++) {
@@ -126,28 +124,23 @@ void clearCanvas() {
 }
 
 int main() {
-    // Initialize canvas with zeros (black)
-    canvas = std::vector<std::vector<uint8_t>>(CANVAS_SIZE, std::vector<uint8_t>(CANVAS_SIZE, 0));
+    canvas = vector<vector<uint8_t>>(CANVAS_SIZE, vector<uint8_t>(CANVAS_SIZE, 0));
     
-    // Load the neural network model
     NeuralNetwork net(784, 128, 10, 0.1);
     if (!net.loadModel("models/mnist_model.bin")) {
-        std::cerr << "Failed to load model!" << std::endl;
+        cerr << "Failed to load model!" << endl;
         return 1;
     }
     
-    // Initialize raylib window
     const int screenWidth = 600;
     const int screenHeight = 400;
     InitWindow(screenWidth, screenHeight, "Digit Recognizer - Draw to Predict");
     SetTargetFPS(60);
     
-    // Button state
     bool predictPressed = false;
-    std::vector<double> lastPredictionConfidences;
+    vector<double> lastPredictionConfidences;
     uint8_t lastPredictedDigit = 10;  // Invalid initially
     
-    // Layout parameters
     const int canvasOffsetX = 10;
     const int canvasOffsetY = 52;
     const int buttonWidth = 100;
@@ -157,18 +150,16 @@ int main() {
     const int clearButtonX = predictButtonX;
     const int clearButtonY = predictButtonY + buttonHeight + 10;
     
-    // Prediction display area
     const int predictionX = predictButtonX;
     const int predictionY = clearButtonY + buttonHeight + 10;
+    const int confidenceX = predictionX + 125;
+    const int confidenceYStart = predictButtonY;
     
-    // Main loop
     while (!WindowShouldClose()) {
-        // Handle mouse drawing
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             int mouseX = GetMouseX();
             int mouseY = GetMouseY();
             
-            // Check if mouse is within canvas bounds
             if (mouseX >= canvasOffsetX && mouseX < canvasOffsetX + DISPLAY_WIDTH &&
                 mouseY >= canvasOffsetY && mouseY < canvasOffsetY + DISPLAY_HEIGHT) {
                 
@@ -178,19 +169,15 @@ int main() {
             }
         }
         
-        // Handle predict button
         Rectangle predictButtonRect = {(float)predictButtonX, (float)predictButtonY, 
                                        (float)buttonWidth, (float)buttonHeight};
         bool predictHovered = CheckCollisionPointRec(GetMousePosition(), predictButtonRect);
         
         if (predictHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            // Downscale canvas
             auto downscaled = downscaleCanvas(canvas);
             
-            // Convert to neural network input
             auto input = canvasToNeuralNetInput(downscaled);
             
-            // Get predictions
             auto confidences = net.forward(input);
             lastPredictionConfidences = confidences;
             lastPredictedDigit = net.predict(input);
@@ -199,7 +186,7 @@ int main() {
         
         // Handle clear button
         Rectangle clearButtonRect = {(float)clearButtonX, (float)clearButtonY, 
-                                     (float)buttonWidth, (float)buttonHeight};
+        (float)buttonWidth, (float)buttonHeight};
         bool clearHovered = CheckCollisionPointRec(GetMousePosition(), clearButtonRect);
         
         if (clearHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -209,52 +196,49 @@ int main() {
             lastPredictedDigit = 10;
         }
         
-        // Rendering
         BeginDrawing();
         ClearBackground(RAYWHITE);
         
-        // Draw title area above the interactive panel so it is not cramped.
-        DrawText("Digit Recognizer", 10, 10, 24, DARKBLUE);
-        DrawText("Draw a digit, then click Predict", 10, 34, 14, DARKGRAY);
+        DrawText("Digit Recognizer", 10, 10, 26, DARKBLUE);
+        DrawText("Draw a digit, then click Predict", 10, 36, 15, DARKGRAY);
         DrawLine(8, 48, screenWidth - 8, 48, LIGHTGRAY);
         
-        // Draw the canvas
+        // Draw canvas
         renderCanvas(canvasOffsetX, canvasOffsetY);
         
-        // Draw predict button
         DrawRectangleRec(predictButtonRect, predictHovered ? LIGHTGRAY : GRAY);
         DrawRectangleLinesEx(predictButtonRect, 2, BLACK);
-        DrawText("Predict", predictButtonX + 15, predictButtonY + 10, 16, BLACK);
+        DrawText("Predict", predictButtonX + 13, predictButtonY + 9, 18, BLACK);
         
         // Draw clear button
         DrawRectangleRec(clearButtonRect, clearHovered ? ORANGE : RED);
         DrawRectangleLinesEx(clearButtonRect, 2, BLACK);
-        DrawText("Clear", clearButtonX + 25, clearButtonY + 10, 16, WHITE);
+        DrawText("Clear", clearButtonX + 23, clearButtonY + 9, 18, WHITE);
         
         // Draw prediction results
         if (predictPressed && lastPredictedDigit < 10) {
-            DrawText("Digit:", predictionX, predictionY, 12, DARKBLUE);
+            DrawText("Digit:", predictionX, predictionY, 17, DARKBLUE);
             
             // Draw the predicted digit in large text
-            std::string digitStr = std::to_string(lastPredictedDigit);
+            string digitStr = to_string(lastPredictedDigit);
             DrawText(digitStr.c_str(), predictionX + 60, predictionY - 5, 28, GREEN);
             
-            // Draw confidence percentages
-            int confidenceY = predictionY + 35;
-            DrawText("Confidence:", predictionX, confidenceY, 12, DARKBLUE);
-            confidenceY += 15;
+            // Draw confidence percentages in a separate right-side column.
+            int confidenceY = confidenceYStart;
+            DrawText("Confidence:", confidenceX, confidenceY, 17, DARKBLUE);
+            confidenceY += 18;
             
             for (int i = 0; i < 10 && i < (int)lastPredictionConfidences.size(); i++) {
                 double confidence = lastPredictionConfidences[i] * 100.0;
                 
                 // Create formatted string with 1 decimal place to save space
-                std::stringstream ss;
-                ss << std::fixed << std::setprecision(1) << confidence;
-                std::string confStr = std::to_string(i) + ":" + ss.str() + "%";
+                stringstream ss;
+                ss << fixed << setprecision(1) << confidence;
+                string spacing = (i == 1) ? "    " : "   ";
+                string confStr = to_string(i) + ":" + spacing + ss.str() + "%";
                 
-                // Highlight the predicted digit
                 Color textColor = (i == lastPredictedDigit) ? GREEN : BLACK;
-                DrawText(confStr.c_str(), predictionX + 5, confidenceY, 16, textColor);
+                DrawText(confStr.c_str(), confidenceX, confidenceY, 18, textColor);
                 
                 confidenceY += 20;
             }

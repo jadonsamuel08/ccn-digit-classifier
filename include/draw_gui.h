@@ -6,7 +6,7 @@
 
 // Canvas dimensions
 const int CANVAS_SIZE = 280;
-const int NN_INPUT_SIZE = 28;  // 28x28 for neural network
+const int NN_INPUT_SIZE = 28;
 const int BRUSH_SIZE = 4;
 
 // Function declarations
