@@ -16,42 +16,138 @@ const int CANVAS_SIZE = 280;
 const int DISPLAY_SCALE = 1;  // Display the canvas at 1x scale to fit in 600x400
 const int DISPLAY_WIDTH = CANVAS_SIZE * DISPLAY_SCALE;
 const int DISPLAY_HEIGHT = CANVAS_SIZE * DISPLAY_SCALE;
-const int BRUSH_SIZE = 10;
+const int BRUSH_SIZE = 8;
 
 vector<vector<uint8_t>> canvas;
 
-// Function to downscale 280x280 to 28x28
-vector<vector<uint8_t>> downscaleCanvas(const vector<vector<uint8_t>>& srcCanvas) {
-    const int srcSize = 280;
-    const int dstSize = 28;
-    const int scale = srcSize / dstSize;  // Should be 10
-    
-    vector<vector<uint8_t>> result(dstSize, vector<uint8_t>(dstSize, 0));
-    
-    for (int y = 0; y < dstSize; y++) {
-        for (int x = 0; x < dstSize; x++) {
-            // Calculate average of the 10x10 region
-            int sum = 0;
-            int count = 0;
-            
-            for (int dy = 0; dy < scale; dy++) {
-                for (int dx = 0; dx < scale; dx++) {
-                    int srcY = y * scale + dy;
-                    int srcX = x * scale + dx;
-                    if (srcY < srcSize && srcX < srcSize) {
-                        sum += srcCanvas[srcY][srcX];
-                        count++;
-                    }
-                }
-            }
-            
-            if (count > 0) {
-                result[y][x] = static_cast<uint8_t>(sum / count);
+struct InkBox {
+    int minX;
+    int minY;
+    int maxX;
+    int maxY;
+    bool valid;
+};
+
+InkBox findInkBoundingBox(const vector<vector<uint8_t>>& srcCanvas) {
+    const int size = static_cast<int>(srcCanvas.size());
+    InkBox box{size, size, -1, -1, false};
+
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            if (srcCanvas[y][x] > 0) {
+                box.minX = min(box.minX, x);
+                box.minY = min(box.minY, y);
+                box.maxX = max(box.maxX, x);
+                box.maxY = max(box.maxY, y);
+                box.valid = true;
             }
         }
     }
-    
-    return result;
+
+    return box;
+}
+
+double sampleBilinear(const vector<vector<uint8_t>>& srcCanvas, double x, double y) {
+    const int size = static_cast<int>(srcCanvas.size());
+    x = clamp(x, 0.0, static_cast<double>(size - 1));
+    y = clamp(y, 0.0, static_cast<double>(size - 1));
+
+    const int x0 = static_cast<int>(floor(x));
+    const int y0 = static_cast<int>(floor(y));
+    const int x1 = min(x0 + 1, size - 1);
+    const int y1 = min(y0 + 1, size - 1);
+
+    const double tx = x - static_cast<double>(x0);
+    const double ty = y - static_cast<double>(y0);
+
+    const double v00 = static_cast<double>(srcCanvas[y0][x0]);
+    const double v10 = static_cast<double>(srcCanvas[y0][x1]);
+    const double v01 = static_cast<double>(srcCanvas[y1][x0]);
+    const double v11 = static_cast<double>(srcCanvas[y1][x1]);
+
+    const double top = v00 * (1.0 - tx) + v10 * tx;
+    const double bottom = v01 * (1.0 - tx) + v11 * tx;
+    return top * (1.0 - ty) + bottom * ty;
+}
+
+vector<vector<uint8_t>> alignByCenterOfMass(const vector<vector<uint8_t>>& img) {
+    const int size = static_cast<int>(img.size());
+    double totalMass = 0.0;
+    double sumX = 0.0;
+    double sumY = 0.0;
+
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            const double mass = static_cast<double>(img[y][x]);
+            totalMass += mass;
+            sumX += static_cast<double>(x) * mass;
+            sumY += static_cast<double>(y) * mass;
+        }
+    }
+
+    if (totalMass <= 0.0) {
+        return img;
+    }
+
+    const double center = (static_cast<double>(size) - 1.0) * 0.5;
+    const double comX = sumX / totalMass;
+    const double comY = sumY / totalMass;
+
+    const int shiftX = static_cast<int>(round(center - comX));
+    const int shiftY = static_cast<int>(round(center - comY));
+
+    vector<vector<uint8_t>> shifted(size, vector<uint8_t>(size, 0));
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            const int dstX = x + shiftX;
+            const int dstY = y + shiftY;
+            if (dstX >= 0 && dstX < size && dstY >= 0 && dstY < size) {
+                shifted[dstY][dstX] = img[y][x];
+            }
+        }
+    }
+
+    return shifted;
+}
+
+// Function to downscale 280x280 to 28x28
+vector<vector<uint8_t>> downscaleCanvas(const vector<vector<uint8_t>>& srcCanvas) {
+    const int dstSize = 28;
+    const int targetDigitSize = 20;
+    vector<vector<uint8_t>> result(dstSize, vector<uint8_t>(dstSize, 0));
+
+    const InkBox box = findInkBoundingBox(srcCanvas);
+    if (!box.valid) {
+        return result;
+    }
+
+    const int srcWidth = box.maxX - box.minX + 1;
+    const int srcHeight = box.maxY - box.minY + 1;
+    const double scale = static_cast<double>(targetDigitSize) /
+                         static_cast<double>(max(srcWidth, srcHeight));
+
+    const int scaledWidth = max(1, static_cast<int>(round(srcWidth * scale)));
+    const int scaledHeight = max(1, static_cast<int>(round(srcHeight * scale)));
+
+    const int offsetX = (dstSize - scaledWidth) / 2;
+    const int offsetY = (dstSize - scaledHeight) / 2;
+
+    for (int y = 0; y < scaledHeight; ++y) {
+        for (int x = 0; x < scaledWidth; ++x) {
+            const double srcX = static_cast<double>(box.minX) +
+                                (static_cast<double>(x) + 0.5) *
+                                (static_cast<double>(srcWidth) / static_cast<double>(scaledWidth));
+            const double srcY = static_cast<double>(box.minY) +
+                                (static_cast<double>(y) + 0.5) *
+                                (static_cast<double>(srcHeight) / static_cast<double>(scaledHeight));
+
+            const double sampled = sampleBilinear(srcCanvas, srcX, srcY);
+            result[offsetY + y][offsetX + x] =
+                static_cast<uint8_t>(clamp(sampled, 0.0, 255.0));
+        }
+    }
+
+    return alignByCenterOfMass(result);
 }
 
 // Convert 28x28 canvas to vector of normalized doubles for neural network
@@ -90,6 +186,21 @@ void drawBrushStroke(int centerX, int centerY) {
                 canvas[y][x] = 255;  // White
             }
         }
+    }
+}
+
+void drawStrokeSegment(int x0, int y0, int x1, int y1) {
+    const int steps = max(abs(x1 - x0), abs(y1 - y0));
+    if (steps == 0) {
+        drawBrushStroke(x0, y0);
+        return;
+    }
+
+    for (int i = 0; i <= steps; ++i) {
+        const double t = static_cast<double>(i) / static_cast<double>(steps);
+        const int x = static_cast<int>(round(static_cast<double>(x0) + t * static_cast<double>(x1 - x0)));
+        const int y = static_cast<int>(round(static_cast<double>(y0) + t * static_cast<double>(y1 - y0)));
+        drawBrushStroke(x, y);
     }
 }
 
@@ -152,6 +263,9 @@ int main() {
     bool showEmptyCanvasHint = false;
     vector<double> lastPredictionConfidences;
     uint8_t lastPredictedDigit = 10;  // Invalid initially
+    bool wasDrawing = false;
+    int lastDrawX = 0;
+    int lastDrawY = 0;
     
     const int canvasOffsetX = 10;
     const int canvasOffsetY = 52;
@@ -177,9 +291,20 @@ int main() {
                 
                 int relativeX = mouseX - canvasOffsetX;
                 int relativeY = mouseY - canvasOffsetY;
-                drawBrushStroke(relativeX, relativeY);
+                if (wasDrawing) {
+                    drawStrokeSegment(lastDrawX, lastDrawY, relativeX, relativeY);
+                } else {
+                    drawBrushStroke(relativeX, relativeY);
+                }
+                lastDrawX = relativeX;
+                lastDrawY = relativeY;
+                wasDrawing = true;
                 showEmptyCanvasHint = false;
+            } else {
+                wasDrawing = false;
             }
+        } else {
+            wasDrawing = false;
         }
         
         Rectangle predictButtonRect = {(float)predictButtonX, (float)predictButtonY, 
