@@ -123,6 +123,17 @@ void clearCanvas() {
     }
 }
 
+bool canvasHasInk() {
+    for (int y = 0; y < CANVAS_SIZE; y++) {
+        for (int x = 0; x < CANVAS_SIZE; x++) {
+            if (canvas[y][x] > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int main() {
     canvas = vector<vector<uint8_t>>(CANVAS_SIZE, vector<uint8_t>(CANVAS_SIZE, 0));
     
@@ -138,6 +149,7 @@ int main() {
     SetTargetFPS(60);
     
     bool predictPressed = false;
+    bool showEmptyCanvasHint = false;
     vector<double> lastPredictionConfidences;
     uint8_t lastPredictedDigit = 10;  // Invalid initially
     
@@ -166,6 +178,7 @@ int main() {
                 int relativeX = mouseX - canvasOffsetX;
                 int relativeY = mouseY - canvasOffsetY;
                 drawBrushStroke(relativeX, relativeY);
+                showEmptyCanvasHint = false;
             }
         }
         
@@ -174,14 +187,20 @@ int main() {
         bool predictHovered = CheckCollisionPointRec(GetMousePosition(), predictButtonRect);
         
         if (predictHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            auto downscaled = downscaleCanvas(canvas);
-            
-            auto input = canvasToNeuralNetInput(downscaled);
-            
-            auto confidences = net.forward(input);
-            lastPredictionConfidences = confidences;
-            lastPredictedDigit = net.predict(input);
-            predictPressed = true;
+            if (!canvasHasInk()) {
+                showEmptyCanvasHint = true;
+                predictPressed = false;
+                lastPredictionConfidences.clear();
+                lastPredictedDigit = 10;
+            } else {
+                auto downscaled = downscaleCanvas(canvas);
+                auto input = canvasToNeuralNetInput(downscaled);
+                auto confidences = net.forward(input);
+                lastPredictionConfidences = confidences;
+                lastPredictedDigit = net.predict(input);
+                predictPressed = true;
+                showEmptyCanvasHint = false;
+            }
         }
         
         // Handle clear button
@@ -192,6 +211,7 @@ int main() {
         if (clearHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             clearCanvas();
             predictPressed = false;
+            showEmptyCanvasHint = false;
             lastPredictionConfidences.clear();
             lastPredictedDigit = 10;
         }
@@ -214,6 +234,10 @@ int main() {
         DrawRectangleRec(clearButtonRect, clearHovered ? ORANGE : RED);
         DrawRectangleLinesEx(clearButtonRect, 2, BLACK);
         DrawText("Clear", clearButtonX + 23, clearButtonY + 9, 18, WHITE);
+
+        if (showEmptyCanvasHint) {
+            DrawText("Draw a digit first", predictButtonX - 10, clearButtonY + 56, 16, MAROON);
+        }
         
         // Draw prediction results
         if (predictPressed && lastPredictedDigit < 10) {

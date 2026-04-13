@@ -30,3 +30,6 @@ mnist_model.bin
 preview
 train
 test
+
+# Tests
+src/temp.cpp
